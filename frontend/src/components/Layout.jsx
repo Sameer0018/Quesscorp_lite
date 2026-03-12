@@ -11,8 +11,13 @@ export function Layout({ children }) {
     <div className="min-h-screen flex flex-col">
       <header className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
-          <Link to="/" className="text-xl font-semibold text-indigo-600">HRMS Lite</Link>
-          <nav className="flex gap-6">
+<Link to="/" className="flex items-center">
+  <img
+    src="https://www.quesscorp.com/wp-content/uploads/2022/11/quessbluesvg.svg"
+    alt="Quess Logo"
+    className="h-10 w-auto"
+  />
+</Link>          <nav className="flex gap-6">
             {nav.map(({ to, label }) => (
               <Link
                 key={to}
