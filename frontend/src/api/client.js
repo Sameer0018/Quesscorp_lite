@@ -1,9 +1,13 @@
 import axios from 'axios';
 
-// Dev: use relative /api so Vite proxy forwards to Django (6008). Build: set VITE_API_URL to your backend URL.
+// Dev: use relative /api so Vite proxy forwards to Django (6008).
+// Build: set VITE_API_URL to your backend URL. If not set, default to
+// the known production backend when built for production.
 const baseURL = import.meta.env.VITE_API_URL
   ? `${String(import.meta.env.VITE_API_URL).replace(/\/$/, '')}/api`
-  : '/api';
+  : (import.meta.env.MODE === 'production'
+      ? 'https://stagedialer.clay.in/api'
+      : '/api');
 
 export const api = axios.create({
   baseURL,
