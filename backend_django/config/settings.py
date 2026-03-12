@@ -1,5 +1,4 @@
 import os
-import dj_database_url
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
@@ -26,15 +25,12 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 
-_default_db = os.environ.get('DATABASE_URL')
-if not _default_db:
-    _default_db = 'sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3').replace('\\', '/')
+# Django still needs a default DB for migrate (contenttypes etc.). API data is in MongoDB (see api/mongodb.py).
 DATABASES = {
-    'default': dj_database_url.config(
-        default=_default_db,
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
 }
 
 LANGUAGE_CODE = 'en-us'

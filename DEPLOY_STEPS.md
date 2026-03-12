@@ -15,53 +15,48 @@ We will use **Render.com** (free tier) for both the backend and frontend.
 
 ## Part 1: Deploy the Django Backend (API)
 
-Think of the backend as the “brain” that stores data and handles requests.
+Think of the backend as the “brain” that stores data and handles requests.  
+**This backend uses MongoDB** (no PostgreSQL). You need a MongoDB Atlas URL.
 
-### Step 1: Create a PostgreSQL Database on Render
+👉 **Full step-by-step for Django + MongoDB:** see **`backend_django/RENDER_DEPLOY_STEPS.md`**
 
-1. Go to [dashboard.render.com](https://dashboard.render.com) and log in.
-2. Click **“New +”** → **“PostgreSQL”**.
-3. Fill in:
-   - **Name:** `hrms-lite-db` (or any name you like)
-   - **Database:** `hrms_lite`
-   - **User:** `hrms`
-   - **Region:** Choose one close to you (e.g. Oregon)
-4. Click **“Create Database”**.
-5. Wait until it shows **“Available”** (green).
-6. Open the database and find **“Internal Database URL”**.  
-   **Copy this URL** and keep it safe – you will use it in the next part.  
-   It looks like: `postgres://hrms:xxxx@dpg-xxxxx-a.oregon-postgres.render.com/hrms_lite`
+Summary:
+
+### Step 1: Get a MongoDB URL (Atlas)
+
+1. Sign up at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) (free).
+2. Create a cluster, then **Connect** → **Drivers** → copy the connection string.
+3. Replace `<password>` with your real password (no `<` or `>`). Add `0.0.0.0/0` in **Network Access** so Render can connect.
+4. Save this URL – you will set it as **`DATABASE_URL`** on Render.
 
 ### Step 2: Create a Web Service for the Django Backend
 
 1. On Render dashboard, click **“New +”** → **“Web Service”**.
-2. **Connect your GitHub** if you haven’t already (connect the account where your HRMS repo is).
-3. Select your **HRMS repository**.
-4. Use these settings:
+2. Connect your **GitHub** repo.
+3. Use these settings:
 
    | Setting | Value |
    |--------|--------|
    | **Name** | `hrms-lite-api` (or any name) |
-   | **Region** | Same as your database |
    | **Root Directory** | `backend_django` ← **Important!** |
    | **Runtime** | Python 3 |
    | **Build Command** | `pip install -r requirements.txt && python manage.py migrate --noinput` |
    | **Start Command** | `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT` |
 
-5. Click **“Advanced”** and add **Environment Variables** (one by one):
+4. Add **Environment Variables**:
 
    | Key | Value |
    |-----|--------|
    | `PYTHON_VERSION` | `3.11.4` |
-   | `SECRET_KEY` | Any long random string (e.g. use a password generator and copy 50 characters) |
+   | `SECRET_KEY` | Any long random string |
    | `DEBUG` | `False` |
-   | `DATABASE_URL` | Paste the **Internal Database URL** you copied in Step 1 |
+   | `DATABASE_URL` | Your **MongoDB Atlas URL** from Step 1 |
    | `ALLOWED_HOSTS` | `.onrender.com` |
-   | `FRONTEND_URL` | Leave empty for now; we will set it after deploying the frontend |
+   | `FRONTEND_URL` | Leave empty for now; set after deploying the frontend |
 
-6. Click **“Create Web Service”**.
-7. Wait for the first deploy to finish (you will see logs; wait until it says “Your service is live”).
-8. Copy your **backend URL** from the top of the page, e.g. `https://hrms-lite-api.onrender.com`.  
+5. Click **“Create Web Service”**.
+6. Wait for the first deploy to finish (you will see logs; wait until it says “Your service is live”).
+7. Copy your **backend URL** from the top of the page, e.g. `https://hrms-lite-api.onrender.com`.  
    **Save this URL** – the frontend will need it.
 
 ### Step 3: (Optional) Add Sample Data

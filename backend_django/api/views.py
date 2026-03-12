@@ -1,28 +1,22 @@
-from django.core.paginator import Paginator
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Employee, Attendance
-from .serializers import EmployeeSerializer, AttendanceSerializer, AttendanceCreateSerializer
+from . import store
 
 
 def _employee_list(request):
     page = max(1, int(request.GET.get('page', 1)))
     limit = min(100, max(1, int(request.GET.get('limit', 20))))
-    qs = Employee.objects.all().order_by('-created_at')
-    paginator = Paginator(qs, limit)
-    p = paginator.get_page(page)
-    data = EmployeeSerializer(p.object_list, many=True).data
-    return Response({'data': data, 'total': paginator.count, 'page': page, 'limit': limit})
+    data, total = store.employee_list(page=page, limit=limit)
+    return Response({'data': data, 'total': total, 'page': page, 'limit': limit})
 
 
 def _employee_detail(request, pk):
-    try:
-        emp = Employee.objects.get(pk=pk)
-    except Employee.DoesNotExist:
+    emp = store.employee_get(pk)
+    if not emp:
         return Response({'error': 'Employee not found.', 'code': 'NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
-    return Response(EmployeeSerializer(emp).data)
+    return Response(emp)
 
 
 def _employee_create(request):
@@ -41,17 +35,13 @@ def _employee_create(request):
         errors.append({'field': 'department', 'message': 'Department is required.'})
     if errors:
         return Response({'error': 'Validation failed.', 'code': 'VALIDATION_ERROR', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
-    if Employee.objects.filter(email=email).exists():
+    emp, err = store.employee_create(full_name=full_name, email=email, department=department)
+    if err == 'EMAIL_EXISTS':
         return Response({'error': 'Email already in use.', 'code': 'EMAIL_EXISTS'}, status=status.HTTP_409_CONFLICT)
-    emp = Employee.objects.create(full_name=full_name, email=email, department=department)
-    return Response(EmployeeSerializer(emp).data, status=status.HTTP_201_CREATED)
+    return Response(emp, status=status.HTTP_201_CREATED)
 
 
 def _employee_update(request, pk):
-    try:
-        emp = Employee.objects.get(pk=pk)
-    except Employee.DoesNotExist:
-        return Response({'error': 'Employee not found.', 'code': 'NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
     data = request.data
     full_name = (data.get('full_name') or '').strip()
     email = (data.get('email') or '').strip()
@@ -67,55 +57,46 @@ def _employee_update(request, pk):
         errors.append({'field': 'department', 'message': 'Department is required.'})
     if errors:
         return Response({'error': 'Validation failed.', 'code': 'VALIDATION_ERROR', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
-    if Employee.objects.filter(email=email).exclude(pk=pk).exists():
+    emp, err = store.employee_update(pk, full_name=full_name, email=email, department=department)
+    if err == 'NOT_FOUND':
+        return Response({'error': 'Employee not found.', 'code': 'NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
+    if err == 'EMAIL_EXISTS':
         return Response({'error': 'Email already in use.', 'code': 'EMAIL_EXISTS'}, status=status.HTTP_409_CONFLICT)
-    emp.full_name = full_name
-    emp.email = email
-    emp.department = department
-    emp.save()
-    return Response(EmployeeSerializer(emp).data)
+    return Response(emp)
 
 
 def _employee_delete(request, pk):
-    try:
-        emp = Employee.objects.get(pk=pk)
-    except Employee.DoesNotExist:
+    if not store.employee_delete(pk):
         return Response({'error': 'Employee not found.', 'code': 'NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
-    emp.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _attendance_mark(request):
-    ser = AttendanceCreateSerializer(data=request.data)
-    if not ser.is_valid():
-        details = [{'field': k, 'message': str(v[0]) if v else 'Invalid'} for k, v in ser.errors.items()]
-        return Response({'error': 'Validation failed.', 'code': 'VALIDATION_ERROR', 'details': details}, status=status.HTTP_400_BAD_REQUEST)
-    data = ser.validated_data
-    try:
-        employee = Employee.objects.get(pk=data['employee_id'])
-    except Employee.DoesNotExist:
+    data = request.data
+    employee_id = data.get('employee_id')
+    date_val = data.get('date')
+    status_val = data.get('status')
+    errors = []
+    if not employee_id:
+        errors.append({'field': 'employee_id', 'message': 'Required.'})
+    if not date_val:
+        errors.append({'field': 'date', 'message': 'Required.'})
+    if status_val not in ('Present', 'Absent'):
+        errors.append({'field': 'status', 'message': 'Must be Present or Absent.'})
+    if errors:
+        return Response({'error': 'Validation failed.', 'code': 'VALIDATION_ERROR', 'details': errors}, status=status.HTTP_400_BAD_REQUEST)
+    att, err = store.attendance_mark(employee_id=employee_id, date_val=date_val, status=status_val)
+    if err == 'NOT_FOUND':
         return Response({'error': 'Employee not found.', 'code': 'NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
-    att, created = Attendance.objects.update_or_create(
-        employee=employee,
-        date=data['date'],
-        defaults={'status': data['status']},
-    )
-    return Response(AttendanceSerializer(att).data, status=status.HTTP_201_CREATED)
+    return Response(att, status=status.HTTP_201_CREATED)
 
 
 def _attendance_by_employee(request, employee_id):
-    try:
-        employee = Employee.objects.get(pk=employee_id)
-    except Employee.DoesNotExist:
-        return Response({'error': 'Employee not found.', 'code': 'NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
-    qs = Attendance.objects.filter(employee=employee).order_by('-date')
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
-    if from_date and len(from_date) == 10:
-        qs = qs.filter(date__gte=from_date)
-    if to_date and len(to_date) == 10:
-        qs = qs.filter(date__lte=to_date)
-    data = AttendanceSerializer(qs, many=True).data
+    data, err = store.attendance_by_employee(employee_id, from_date=from_date, to_date=to_date)
+    if err == 'NOT_FOUND':
+        return Response({'error': 'Employee not found.', 'code': 'NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
     return Response({'data': data})
 
 
