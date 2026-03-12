@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Environment and secrets
+.env
+.env.local
+*.env
+
+# Build outputs
+dist/
+build/
+staticfiles/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs and DB (optional: remove db.sqlite3 if you want to track it)
+*.log
+# db.sqlite3

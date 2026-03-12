@@ -1,0 +1,27 @@
+{
+  "name": "hrms-lite-backend",
+  "version": "1.0.0",
+  "description": "HRMS Lite API - Node.js + MySQL",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "migrate": "node src/scripts/runMigrations.js",
+    "seed": "node src/scripts/seed.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^8.0.3",
+    "swagger-ui-express": "^5.0.0",
+    "uuid": "^9.0.1",
+    "validator": "^13.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
