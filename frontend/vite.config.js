@@ -8,7 +8,8 @@ export default defineConfig({
     // Proxy /api to Django backend (port 8001). Set VITE_API_URL for production.
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8001',
+        // target: 'http://localhost:6008',
+        target: 'https://stagedialer.clay.in',
         changeOrigin: true,
       },
       '/health': {
